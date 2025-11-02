@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Domain Pattern Network - Ultra HD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        canvas {
+            display: block;
+            cursor: pointer;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: high-quality;
+        }
+        
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1;
+                backdrop-filter: blur(20px) saturate(150%);
+            }
+        }
+        
+        #panel {
+            background: linear-gradient(135deg, 
+                rgba(26, 31, 53, 0.95) 0%, 
+                rgba(15, 20, 32, 0.98) 50%,
+                rgba(20, 25, 40, 0.95) 100%);
+            border: 3px solid rgba(100, 150, 255, 0.5);
+            border-radius: 24px;
+            padding: 50px;
+            max-width: 1400px;
+            max-height: 92vh;
+            overflow-y: auto;
+            color: white;
+            box-shadow: 
+                0 40px 120px rgba(0, 0, 0, 0.8),
+                0 0 80px rgba(100, 150, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(50px) scale(0.95);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        #panel::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        #panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        #panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, 
+                rgba(100, 150, 255, 0.5) 0%, 
+                rgba(100, 150, 255, 0.3) 100%);
+            border-radius: 6px;
+            border: 2px solid rgba(15, 20, 32, 0.5);
+        }
+        
+        #panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, 
+                rgba(100, 150, 255, 0.7) 0%, 
+                rgba(100, 150, 255, 0.5) 100%);
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: linear-gradient(135deg, rgba(255, 100, 100, 0.25), rgba(255, 80, 80, 0.2));
+            border: 2px solid rgba(255, 100, 100, 0.6);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .close-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 100, 100, 0.4), rgba(255, 80, 80, 0.35));
+            transform: scale(1.08) translateY(-2px);
+            box-shadow: 
+                0 8px 25px rgba(255, 100, 100, 0.4),
+                0 0 40px rgba(255, 100, 100, 0.2);
+        }
+        
+        .close-btn:active {
+            transform: scale(1.02);
+        }
+        
+        .header {
+            margin-bottom: 35px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid rgba(100, 150, 255, 0.3);
+            position: relative;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 120px;
+            height: 3px;
+            background: linear-gradient(90deg, #6af, transparent);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; transform: translateX(0); }
+            50% { opacity: 1; transform: translateX(100px); }
+        }
+        
+        .header h2 {
+            font-size: 38px;
+            margin-bottom: 18px;
+            color: #6af;
+            text-shadow: 
+                0 0 20px rgba(102, 170, 255, 0.6),
+                0 2px 10px rgba(102, 170, 255, 0.4);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        
+        .header .domain {
+            font-size: 22px;
+            color: #8bf;
+            margin-bottom: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        
+        .header .core-pattern {
+            font-size: 20px;
+            color: #9ad;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, 
+                rgba(100, 150, 255, 0.2), 
+                rgba(100, 150, 255, 0.1));
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 18px 0;
+            border: 2px solid rgba(100, 150, 255, 0.35);
+            box-shadow: 0 4px 15px rgba(100, 150, 255, 0.1);
+        }
+        
+        .header .description {
+            font-size: 18px;
+            line-height: 1.9;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 20px;
+            font-weight: 400;
+        }
+        
+        .params {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .param-box {
+            background: linear-gradient(135deg, 
+                rgba(100, 150, 255, 0.15), 
+                rgba(100, 150, 255, 0.08));
+            border: 2px solid rgba(100, 150, 255, 0.4);
+            padding: 28px 30px;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .param-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.1), 
+                transparent);
+            transition: left 0.5s;
+        }
+        
+        .param-box:hover::before {
+            left: 100%;
+        }
+        
+        .param-box:hover {
+            transform: translateY(-5px) scale(1.02);
+            background: linear-gradient(135deg, 
+                rgba(100, 150, 255, 0.22), 
+                rgba(100, 150, 255, 0.12));
+            box-shadow: 
+                0 12px 35px rgba(100, 150, 255, 0.25),
+                0 0 50px rgba(100, 150, 255, 0.15);
+            border-color: rgba(100, 150, 255, 0.6);
+        }
+        
+        .param-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.65);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .param-value {
+            font-size: 42px;
+            font-weight: 900;
+            color: #6af;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            text-shadow: 
+                0 0 30px rgba(102, 170, 255, 0.6),
+                0 4px 10px rgba(102, 170, 255, 0.4);
+            letter-spacing: -1px;
+        }
+        
+        .section {
+            margin: 45px 0;
+        }
+        
+        .section-title {
+            font-size: 26px;
+            color: #8bf;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(100, 150, 255, 0.25);
+            text-shadow: 0 2px 8px rgba(136, 187, 255, 0.4);
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        
+        .related-patterns {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 25px;
+        }
+        
+        .pattern-card {
+            background: linear-gradient(135deg, 
+                rgba(100, 150, 255, 0.12), 
+                rgba(100, 150, 255, 0.06));
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pattern-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6af, #8bf, #6af);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+        
+        .pattern-card:hover::before {
+            transform: translateX(100%);
+        }
+        
+        .pattern-card:hover {
+            background: linear-gradient(135deg, 
+                rgba(100, 150, 255, 0.2), 
+                rgba(100, 150, 255, 0.1));
+            border-color: rgba(100, 150, 255, 0.6);
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 
+                0 15px 40px rgba(100, 150, 255, 0.25),
+                0 0 60px rgba(100, 150, 255, 0.15);
+        }
+        
+        .pattern-card h4 {
+            font-size: 18px;
+            color: #6af;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-weight: 700;
+        }
+        
+        .pattern-card .card-domain {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+        
+        .pattern-card .card-params {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.55);
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        .similarity-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, 
+                rgba(100, 255, 150, 0.25), 
+                rgba(100, 255, 150, 0.15));
+            border: 2px solid rgba(100, 255, 150, 0.5);
+            color: #6f8;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 12px;
+            font-weight: 700;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.3px;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 18px;
+        }
+        
+        .tag {
+            background: linear-gradient(135deg, 
+                rgba(150, 100, 255, 0.28), 
+                rgba(150, 100, 255, 0.18));
+            border: 2px solid rgba(150, 100, 255, 0.4);
+            color: #b8f;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        
+        .tag:hover {
+            background: linear-gradient(135deg, 
+                rgba(150, 100, 255, 0.4), 
+                rgba(150, 100, 255, 0.25));
+            transform: scale(1.08);
+            box-shadow: 0 4px 15px rgba(150, 100, 255, 0.3);
+        }
+        
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 22px;
+            margin-top: 25px;
+            padding: 28px;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.04), 
+                rgba(255, 255, 255, 0.02));
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .metadata-item {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.6;
+        }
+        
+        .metadata-label {
+            color: rgba(255, 255, 255, 0.5);
+            margin-right: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-tooltip {
+            position: absolute;
+            background: linear-gradient(135deg, 
+                rgba(10, 14, 26, 0.98), 
+                rgba(15, 20, 32, 0.98));
+            border: 2px solid rgba(100, 150, 255, 0.6);
+            border-radius: 12px;
+            padding: 16px 24px;
+            color: white;
+            font-size: 15px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            box-shadow: 
+                0 8px 30px rgba(0, 0, 0, 0.7),
+                0 0 40px rgba(100, 150, 255, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        .info-tooltip.show {
+            opacity: 1;
+        }
+        
+        .info-tooltip strong {
+            color: #6af;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            #panel {
+                padding: 30px;
+                max-width: 95vw;
+            }
+            
+            .params {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .related-patterns {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h2 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info-tooltip" id="tooltip"></div>
+    
+    <div id="overlay">
+        <div id="panel">
+            <button class="close-btn" onclick="closePanel()">✕ Close</button>
+            <div id="panel-content"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Embedded pattern data
+        const patternData = `Node_ID,Title,Domain,CorePattern,Lambda,Delta,Psi,Description,Tags,Source,Timestamp
+NOB-20251031-001,Pattern Node 1,Ripple Frame Whiteboard,"A → B → ŊĪ(Z)",0.3,0.05,0.54,"Synthetic description for ripple cognition node","ripple frame, pattern, node",Obviology,2025-10-31 12:00:00
+NOB-20251031-002,Pattern Node 2,TPS-DNA,"A → B → ŊĪ(Z)",0.4,0.10,0.60,"Biblical-inspired emotional logic pattern","tps-dna, pattern, node",TPS,2025-10-31 12:00:00
+NOB-20251031-003,Pattern Node 3,Phoenix Protocol,"A → B → ŊĪ(Z)",0.5,0.15,0.63,"Cycle regeneration and thermodynamic cognition","phoenix, pattern, node",Phoenix,2025-10-31 12:00:00
+NOB-20251031-004,Pattern Node 4,URFT—ŊĪOB Bridge,"A → B → ŊĪ(Z)",0.6,0.20,0.67,"Bridge between physical and cognitive resonance","urft-nob, pattern, node",URFT,2025-10-31 12:00:00
+NOB-20251031-005,Pattern Node 5,CBR/TPSaiC,"A → B → ŊĪ(Z)",0.7,0.25,0.72,"Case-based reasoning behavioural pattern","cbr, tpsaic, pattern, node",CBR,2025-10-31 12:00:00
+NOB-20251031-006,Thermal-Emotional Bridge,Thermodynamics→Psychology,"Heat → Hope → ŊĪ(Z)",0.45,0.12,0.58,"Thermal rise patterns mapping to emotional elevation","thermal, emotional, bridge",Physics,2025-10-31 12:05:00
+NOB-20251031-007,Fluid-Cognitive Flow,Hydrology→Neuroscience,"Current → Thought → ŊĪ(Z)",0.52,0.18,0.61,"River flow patterns mapping to thought stream dynamics","fluid, cognitive, flow",Hydrology,2025-10-31 12:10:00
+NOB-20251031-008,Gravitational-Attraction,Physics→Sociology,"Mass → Influence → ŊĪ(Z)",0.38,0.08,0.55,"Gravity laws mapping to social attraction patterns","gravity, social, attraction",Physics,2025-10-31 12:15:00
+NOB-20251031-009,Quantum-Decision,Quantum Physics→Economics,"Superposition → Choice → ŊĪ(Z)",0.67,0.22,0.69,"Quantum states mapping to decision uncertainty","quantum, decision, economics",Quantum,2025-10-31 12:20:00
+NOB-20251031-010,Ecological-Balance,Ecology→Psychology,"Ecosystem → Mind → ŊĪ(Z)",0.49,0.14,0.59,"Ecological balance mapping to mental homeostasis","ecology, balance, mind",Ecology,2025-10-31 12:25:00
+NOB-20251031-011,Cellular-Communication,Biology→Linguistics,"Cell Signal → Language → ŊĪ(Z)",0.55,0.16,0.62,"Cellular signaling mapping to linguistic communication","cellular, language, communication",Biology,2025-10-31 12:30:00
+NOB-20251031-012,Genetic-Memory,Genetics→History,"DNA → Culture → ŊĪ(Z)",0.43,0.11,0.57,"Genetic inheritance mapping to cultural memory","genetic, memory, culture",Genetics,2025-10-31 12:35:00
+NOB-20251031-013,Optical-Perception,Optics→Epistemology,"Light → Knowledge → ŊĪ(Z)",0.61,0.19,0.65,"Light reflection mapping to knowledge perception","optics, perception, knowledge",Optics,2025-10-31 12:40:00
+NOB-20251031-014,Acoustic-Resonance,Acoustics→Empathy,"Sound Wave → Emotion → ŊĪ(Z)",0.47,0.13,0.60,"Acoustic resonance mapping to emotional resonance","acoustic, resonance, empathy",Acoustics,2025-10-31 12:45:00
+NOB-20251031-015,Magnetic-Alignment,Physics→Leadership,"Magnet → Leader → ŊĪ(Z)",0.53,0.17,0.63,"Magnetic fields mapping to leadership influence","magnetic, leadership, alignment",Physics,2025-10-31 12:50:00
+NOB-20251031-016,Chemical-Bonding,Chemistry→Relationships,"Bond → Connection → ŊĪ(Z)",0.58,0.21,0.66,"Chemical bonds mapping to human relationships","chemical, bonding, relationships",Chemistry,2025-10-31 12:55:00
+NOB-20251031-017,Entropic-Disorder,Physics→Creativity,"Entropy → Innovation → ŊĪ(Z)",0.64,0.23,0.68,"Entropic disorder mapping to creative chaos","entropy, creativity, disorder",Physics,2025-10-31 13:00:00
+NOB-20251031-018,Crystalline-Structure,Mineralogy→Institutions,"Crystal → Organization → ŊĪ(Z)",0.41,0.09,0.56,"Crystal growth mapping to institutional structures","crystalline, structure, organization",Mineralogy,2025-10-31 13:05:00
+NOB-20251031-019,Photosynthetic-Growth,Botany→Education,"Photosynthesis → Learning → ŊĪ(Z)",0.50,0.15,0.61,"Plant growth mapping to knowledge acquisition","photosynthesis, growth, learning",Botany,2025-10-31 13:10:00
+NOB-20251031-020,Neural-Network,Biology→Technology,"Neuron → Node → ŊĪ(Z)",0.66,0.24,0.70,"Biological neural networks mapping to AI systems","neural, network, ai",Biology,2025-10-31 13:15:00
+NOB-20251031-021,Tidal-Cycles,Oceanography→Economics,"Tide → Market → ŊĪ(Z)",0.44,0.12,0.58,"Ocean tides mapping to economic cycles","tidal, cycles, economics",Oceanography,2025-10-31 13:20:00
+NOB-20251031-022,Synaptic-Connection,Neuroscience→Communication,"Synapse → Dialogue → ŊĪ(Z)",0.59,0.20,0.64,"Neural synapses mapping to communication pathways","synaptic, connection, dialogue",Neuroscience,2025-10-31 13:25:00
+NOB-20251031-023,Fungal-Network,Mycology→Internet,"Mycelium → Network → ŊĪ(Z)",0.48,0.14,0.59,"Fungal networks mapping to digital connectivity","fungal, network, internet",Mycology,2025-10-31 13:30:00
+NOB-20251031-024,Orbital-Mechanics,Astronomy→Psychology,"Orbit → Attention → ŊĪ(Z)",0.54,0.18,0.62,"Planetary orbits mapping to focus patterns","orbital, attention, mechanics",Astronomy,2025-10-31 13:35:00
+NOB-20251031-025,Immunological-Defense,Immunology→Security,"Antibody → Defense → ŊĪ(Z)",0.62,0.22,0.67,"Immune response mapping to security systems","immunological, defense, security",Immunology,2025-10-31 13:40:00
+NOB-20251031-026,Metabolic-Pathway,Biochemistry→Economics,"Metabolism → Economy → ŊĪ(Z)",0.57,0.19,0.63,"Metabolic pathways mapping to economic flows","metabolic, pathway, economy",Biochemistry,2025-10-31 13:45:00
+NOB-20251031-027,Evolutionary-Adaptation,Biology→Innovation,"Evolution → Progress → ŊĪ(Z)",0.65,0.25,0.71,"Biological evolution mapping to technological innovation","evolution, adaptation, innovation",Biology,2025-10-31 13:50:00
+NOB-20251031-028,Geological-Strata,Geology→History,"Strata → Timeline → ŊĪ(Z)",0.42,0.10,0.56,"Geological layers mapping to historical records","geological, strata, history",Geology,2025-10-31 13:55:00
+NOB-20251031-029,Atmospheric-Pressure,Meteorology→Psychology,"Pressure → Stress → ŊĪ(Z)",0.46,0.13,0.57,"Atmospheric pressure mapping to psychological stress","atmospheric, pressure, stress",Meteorology,2025-10-31 14:00:00
+NOB-20251031-030,Genetic-Expression,Genetics→Education,"Gene Expression → Skill Development → ŊĪ(Z)",0.51,0.16,0.60,"Gene activation mapping to learning development","genetic, expression, education",Genetics,2025-10-31 14:05:00
+NOB-20251031-031,Quantum-Entanglement,Quantum Physics→Relationships,"Entanglement → Intimacy → ŊĪ(Z)",0.68,0.26,0.72,"Quantum entanglement mapping to deep relationships","quantum, entanglement, intimacy",Quantum,2025-10-31 14:10:00
+NOB-20251031-032,Photosynthetic-Efficiency,Botany→Productivity,"Efficiency → Productivity → ŊĪ(Z)",0.45,0.11,0.58,"Photosynthetic efficiency mapping to work productivity","photosynthesis, efficiency, productivity",Botany,2025-10-31 14:15:00
+NOB-20251031-033,Neural-Plasticity,Neuroscience→Learning,"Plasticity → Adaptability → ŊĪ(Z)",0.56,0.17,0.61,"Neural plasticity mapping to learning flexibility","neural, plasticity, learning",Neuroscience,2025-10-31 14:20:00
+NOB-20251031-034,Thermodynamic-Equilibrium,Physics→Psychology,"Equilibrium → Balance → ŊĪ(Z)",0.49,0.14,0.59,"Thermal equilibrium mapping to emotional balance","thermodynamic, equilibrium, balance",Physics,2025-10-31 14:25:00
+NOB-20251031-035,Ecological-Succession,Ecology→Personal Growth,"Succession → Development → ŊĪ(Z)",0.53,0.18,0.62,"Ecological succession mapping to personal growth","ecological, succession, growth",Ecology,2025-10-31 14:30:00
+NOB-20251031-036,Cellular-Respiration,Biology→Energy Management,"Respiration → Energy → ŊĪ(Z)",0.60,0.21,0.65,"Cellular respiration mapping to energy management","cellular, respiration, energy",Biology,2025-10-31 14:35:00
+NOB-20251031-037,Optical-Focus,Optics→Attention,"Lens → Focus → ŊĪ(Z)",0.47,0.12,0.58,"Optical focus mapping to mental attention","optical, focus, attention",Optics,2025-10-31 14:40:00
+NOB-20251031-038,Acoustic-Harmony,Acoustics→Relationships,"Harmony → Compatibility → ŊĪ(Z)",0.55,0.19,0.63,"Acoustic harmony mapping to relationship compatibility","acoustic, harmony, relationships",Acoustics,2025-10-31 14:45:00
+NOB-20251031-039,Magnetic-Polarity,Physics→Decision Making,"Polarity → Choice → ŊĪ(Z)",0.63,0.23,0.68,"Magnetic polarity mapping to decision directions","magnetic, polarity, decision",Physics,2025-10-31 14:50:00
+NOB-20251031-040,Chemical-Catalysis,Chemistry→Acceleration,"Catalyst → Accelerator → ŊĪ(Z)",0.58,0.20,0.64,"Chemical catalysts mapping to process acceleration","chemical, catalysis, acceleration",Chemistry,2025-10-31 14:55:00`;
+
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, idx) => {
+                    row[header.trim()] = values[idx]?.trim().replace(/"/g, '');
+                });
+                
+                row.Lambda = parseFloat(row.Lambda) || 0.5;
+                row.Delta = parseFloat(row.Delta) || 0.1;
+                row.Psi = parseFloat(row.Psi) || 0.6;
+                
+                data.push(row);
+            }
+            
+            return data;
+        }
+
+        const patterns = parseCSV(patternData);
+        
+        // Ultra HD Canvas setup with maximum DPI scaling
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { 
+            alpha: false,
+            desynchronized: true
+        });
+        const overlay = document.getElementById('overlay');
+        const panelContent = document.getElementById('panel-content');
+        const tooltip = document.getElementById('tooltip');
+        
+        const dpr = Math.min(window.devicePixelRatio || 1, 3); // Cap at 3x for performance
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.scale(dpr, dpr);
+        }
+        
+        resizeCanvas();
+        
+        let time = 0;
+        let animationId;
+        let barPositions = [];
+        let hoveredBar = null;
+        let particles = [];
+        
+        // Particle system for ambient effect
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.life = Math.random();
+                this.maxLife = 0.8 + Math.random() * 0.2;
+                this.size = 1 + Math.random() * 2;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.003;
+                
+                if (this.life <= 0 || this.x < 0 || this.x > window.innerWidth || 
+                    this.y < 0 || this.y > window.innerHeight) {
+                    this.reset();
+                }
+            }
+            
+            draw(ctx) {
+                const alpha = this.life * 0.3;
+                ctx.fillStyle = `rgba(100, 150, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Initialize particles
+        for (let i = 0; i < 50; i++) {
+            particles.push(new Particle());
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Find related patterns based on similarity
+        function findRelatedPatterns(pattern, limit = 6) {
+            return patterns
+                .filter(p => p.Node_ID !== pattern.Node_ID)
+                .map(p => {
+                    const psiDiff = Math.abs(p.Psi - pattern.Psi);
+                    const lambdaDiff = Math.abs(p.Lambda - pattern.Lambda);
+                    const deltaDiff = Math.abs(p.Delta - pattern.Delta);
+                    const similarity = 1 - (psiDiff * 0.5 + lambdaDiff * 0.3 + deltaDiff * 0.2);
+                    
+                    const domainMatch = p.Domain.split('→').some(d => 
+                        pattern.Domain.split('→').includes(d)
+                    );
+                    
+                    return {
+                        pattern: p,
+                        similarity: similarity + (domainMatch ? 0.2 : 0),
+                        reason: domainMatch ? 'Shared Domain' : 'Parameter Resonance'
+                    };
+                })
+                .sort((a, b) => b.similarity - a.similarity)
+                .slice(0, limit);
+        }
+        
+        // Show pattern details panel
+        function showPatternDetails(pattern) {
+            const relatedPatterns = findRelatedPatterns(pattern);
+            const tags = pattern.Tags.split(',').map(t => t.trim());
+            
+            panelContent.innerHTML = `
+                <div class="header">
+                    <h2>${pattern.Title}</h2>
+                    <div class="domain">${pattern.Domain}</div>
+                    <div class="core-pattern">${pattern.CorePattern}</div>
+                    <div class="description">${pattern.Description}</div>
+                </div>
+                
+                <div class="params">
+                    <div class="param-box">
+                        <div class="param-label">Lambda (λ)</div>
+                        <div class="param-value">${pattern.Lambda}</div>
+                    </div>
+                    <div class="param-box">
+                        <div class="param-label">Delta (δ)</div>
+                        <div class="param-value">${pattern.Delta}</div>
+                    </div>
+                    <div class="param-box">
+                        <div class="param-label">Psi (ψ)</div>
+                        <div class="param-value">${pattern.Psi}</div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Cross-Domain Connections</div>
+                    <div class="related-patterns">
+                        ${relatedPatterns.map(r => `
+                            <div class="pattern-card" onclick="showPatternDetails(patterns.find(p => p.Node_ID === '${r.pattern.Node_ID}'))">
+                                <h4>${r.pattern.Title}</h4>
+                                <div class="card-domain">${r.pattern.Domain}</div>
+                                <div class="card-params">λ:${r.pattern.Lambda} δ:${r.pattern.Delta} ψ:${r.pattern.Psi}</div>
+                                <div class="similarity-badge">${(r.similarity * 100).toFixed(0)}% ${r.reason}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Pattern Attributes</div>
+                    <div class="tags">
+                        ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                    
+                    <div class="metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Node ID:</span>${pattern.Node_ID}
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Source:</span>${pattern.Source}
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Timestamp:</span>${pattern.Timestamp}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            overlay.style.display = 'flex';
+        }
+        
+        function closePanel() {
+            overlay.style.display = 'none';
+        }
+        
+        // Ultra HD Animation loop
+        function animate() {
+            time += 0.01;
+            
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            
+            // Gradient background
+            const bgGradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h));
+            bgGradient.addColorStop(0, '#0f1420');
+            bgGradient.addColorStop(0.5, '#0a0e1a');
+            bgGradient.addColorStop(1, '#050810');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Draw and update particles
+            particles.forEach(p => {
+                p.update();
+                p.draw(ctx);
+            });
+            
+            const numLines = Math.min(patterns.length, Math.floor(w / 12));
+            const lineSpacing = w / numLines;
+            
+            barPositions = [];
+            
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Draw patterns with ultra HD quality
+            for (let i = 0; i < numLines; i++) {
+                const pattern = patterns[i % patterns.length];
+                const x = i * lineSpacing + lineSpacing / 2;
+                
+                const baseHeight = h * 0.7;
+                const heightModulation = Math.sin(time + i * 0.25) * 0.18 + 1;
+                const height = baseHeight * pattern.Lambda * heightModulation;
+                
+                const baseWidth = 4 + pattern.Delta * 45;
+                const widthPulse = Math.sin(time * 2.5 + i * 0.35) * 0.08 + 1;
+                const width = baseWidth * widthPulse;
+                
+                const segments = Math.floor(10 + pattern.Psi * 18);
+                const segmentHeight = height / segments;
+                
+                barPositions.push({
+                    x: x - width / 2,
+                    y: h / 2 - height / 2,
+                    width: width,
+                    height: height,
+                    pattern: pattern
+                });
+                
+                // Enhanced glow for hovered bar
+                if (hoveredBar && hoveredBar.pattern.Node_ID === pattern.Node_ID) {
+                    ctx.shadowBlur = 50;
+                    ctx.shadowColor = `hsla(${(pattern.Psi * 360) % 360}, 90%, 65%, 0.9)`;
+                    
+                    // Outer glow ring
+                    ctx.strokeStyle = `hsla(${(pattern.Psi * 360) % 360}, 80%, 60%, 0.4)`;
+                    ctx.lineWidth = 6;
+                    ctx.strokeRect(x - width/2 - 3, h/2 - height/2 - 3, width + 6, height + 6);
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                
+                for (let s = 0; s < segments; s++) {
+                    const segmentY = h / 2 - height / 2 + s * segmentHeight;
+                    
+                    const hue = (pattern.Psi * 360 + time * 25) % 360;
+                    const saturation = 80 + pattern.Delta * 20;
+                    const lightness = 48 + Math.sin(time * 1.5 + s * 0.6) * 10;
+                    
+                    const alpha = (s % 2 === 0) ? 0.95 : 0.55;
+                    
+                    // Multi-layer gradient for depth
+                    const gradient = ctx.createLinearGradient(x - width/2, segmentY, x + width/2, segmentY + segmentHeight);
+                    gradient.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness - 12}%, ${alpha})`);
+                    gradient.addColorStop(0.15, `hsla(${hue}, ${saturation}%, ${lightness - 5}%, ${alpha})`);
+                    gradient.addColorStop(0.5, `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`);
+                    gradient.addColorStop(0.85, `hsla(${hue}, ${saturation}%, ${lightness - 5}%, ${alpha})`);
+                    gradient.addColorStop(1, `hsla(${hue}, ${saturation}%, ${lightness - 12}%, ${alpha})`);
+                    
+                    ctx.fillStyle = gradient;
+                    
+                    const segmentYOffset = Math.sin(time * 3.5 + i * 0.25 + s * 0.45) * 5;
+                    const radius = Math.min(width / 3.5, 4);
+                    const sx = x - width / 2;
+                    const sy = segmentY + segmentYOffset;
+                    const sh = segmentHeight * 0.9;
+                    
+                    // Rounded rectangles
+                    ctx.beginPath();
+                    ctx.roundRect(sx, sy, width, sh, radius);
+                    ctx.fill();
+                    
+                    // Highlight edge
+                    if (s % 2 === 0) {
+                        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness + 15}%, 0.3)`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+                
+                ctx.shadowBlur = 0;
+                
+                // Enhanced vertical line with gradient
+                const lineGradient = ctx.createLinearGradient(x, h/2 - height/2, x, h/2 + height/2);
+                lineGradient.addColorStop(0, `hsla(${(pattern.Psi * 360) % 360}, 70%, 40%, 0.05)`);
+                lineGradient.addColorStop(0.3, `hsla(${(pattern.Psi * 360) % 360}, 70%, 45%, 0.5)`);
+                lineGradient.addColorStop(0.7, `hsla(${(pattern.Psi * 360) % 360}, 70%, 45%, 0.5)`);
+                lineGradient.addColorStop(1, `hsla(${(pattern.Psi * 360) % 360}, 70%, 40%, 0.05)`);
+                
+                ctx.strokeStyle = lineGradient;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(x, h/2 - height/2);
+                ctx.lineTo(x, h/2 + height/2);
+                ctx.stroke();
+                
+                // Ultra HD connection waves
+                if (i < numLines - 1) {
+                    const nextPattern = patterns[(i + 1) % patterns.length];
+                    const similarity = Math.abs(pattern.Psi - nextPattern.Psi);
+                    
+                    if (similarity < 0.15) {
+                        const wave = Math.sin(time * 2.2 - i * 0.35) * 30;
+                        const waveGradient = ctx.createLinearGradient(x, h/2, x + lineSpacing, h/2);
+                        waveGradient.addColorStop(0, `hsla(${(pattern.Psi * 360) % 360}, 80%, 60%, 0.12)`);
+                        waveGradient.addColorStop(0.3, `hsla(${(pattern.Psi * 360) % 360}, 85%, 68%, 0.35)`);
+                        waveGradient.addColorStop(0.7, `hsla(${(nextPattern.Psi * 360) % 360}, 85%, 68%, 0.35)`);
+                        waveGradient.addColorStop(1, `hsla(${(nextPattern.Psi * 360) % 360}, 80%, 60%, 0.12)`);
+                        
+                        ctx.strokeStyle = waveGradient;
+                        ctx.lineWidth = 2.5;
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = `hsla(${(pattern.Psi * 360) % 360}, 80%, 60%, 0.3)`;
+                        ctx.beginPath();
+                        ctx.moveTo(x, h/2 + wave);
+                        ctx.bezierCurveTo(
+                            x + lineSpacing / 3, h/2 + wave * 1.6,
+                            x + lineSpacing * 2/3, h/2 - wave * 1.6,
+                            x + lineSpacing, h/2 - wave
+                        );
+                        ctx.stroke();
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+            
+            // Ultra HD Title with multiple shadows
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = 'rgba(102, 170, 255, 0.7)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+            ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.fillText('Cross-Domain Pattern Network', 40, 60);
+            
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(102, 170, 255, 0.5)';
+            ctx.font = '18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillText(`${patterns.length} Pattern Nodes • Click any bar to explore connections`, 40, 88);
+            
+            ctx.shadowBlur = 0;
+            
+            // Enhanced legend
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.font = '14px "SF Mono", "Monaco", "Courier New", monospace';
+            ctx.fillText('Height: λ (Pattern Strength)', 40, h - 78);
+            ctx.fillText('Width: δ (Variation)', 40, h - 54);
+            ctx.fillText('Color: ψ (Resonance)', 40, h - 30);
+            
+            ctx.fillStyle = 'rgba(102, 170, 255, 0.4)';
+            ctx.font = '12px monospace';
+            ctx.fillText(`Ultra HD • ${dpr}x DPI • ${Math.round(1000/16)}fps`, w - 220, h - 30);
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Click handler
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            for (let bar of barPositions) {
+                if (clickX >= bar.x && clickX <= bar.x + bar.width &&
+                    clickY >= bar.y && clickY <= bar.y + bar.height) {
+                    showPatternDetails(bar.pattern);
+                    return;
+                }
+            }
+        });
+        
+        // Enhanced hover with smooth tooltip
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            let newHoveredBar = null;
+            for (let bar of barPositions) {
+                if (mouseX >= bar.x && mouseX <= bar.x + bar.width &&
+                    mouseY >= bar.y && mouseY <= bar.y + bar.height) {
+                    newHoveredBar = bar;
+                    break;
+                }
+            }
+            
+            hoveredBar = newHoveredBar;
+            canvas.style.cursor = hoveredBar ? 'pointer' : 'default';
+            
+            if (hoveredBar) {
+                tooltip.innerHTML = `<strong>${hoveredBar.pattern.Title}</strong><br><span style="color: #8bf;">${hoveredBar.pattern.Domain}</span>`;
+                tooltip.style.left = (e.clientX + 20) + 'px';
+                tooltip.style.top = (e.clientY + 20) + 'px';
+                tooltip.classList.add('show');
+            } else {
+                tooltip.classList.remove('show');
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            hoveredBar = null;
+            tooltip.classList.remove('show');
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePanel();
+            }
+        });
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closePanel();
+            }
+        });
+        
+        animate();
+        
+        window.addEventListener('beforeunload', () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        });
+    </script>
+</body>
+</html>
